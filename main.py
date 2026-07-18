@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.datasets import imdb
@@ -14,14 +15,29 @@ class CompatibleSimpleRNN(SimpleRNN):
         super().__init__(*args, **kwargs)
 
 
+def resolve_model_path():
+    base_dir = Path(__file__).resolve().parent
+    candidate_paths = [
+        base_dir / "simple_rnn_imdb.h5",
+        base_dir / "models" / "simple_rnn_imdb.h5",
+    ]
+
+    for candidate in candidate_paths:
+        if candidate.exists():
+            return str(candidate)
+
+    return str(candidate_paths[0])
+
+
 def load_sentiment_model():
     word_index = imdb.get_word_index()
     reverse_word_index = {value: key for key, value in word_index.items()}
-    model_path = os.path.join(os.path.dirname(__file__), "simple_rnn_imdb.h5")
+    model_path = resolve_model_path()
 
     model = load_model(
         model_path,
         custom_objects={"SimpleRNN": CompatibleSimpleRNN},
+        compile=False
     )
     return model, word_index, reverse_word_index
 
