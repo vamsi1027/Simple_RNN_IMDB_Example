@@ -9,6 +9,10 @@ from tensorflow.keras.layers import SimpleRNN
 import streamlit as st
 
 
+# Make inference more reliable with the older Keras model format.
+tf.config.run_functions_eagerly(True)
+
+
 class CompatibleSimpleRNN(SimpleRNN):
     def __init__(self, *args, **kwargs):
         kwargs.pop("time_major", None)
@@ -36,8 +40,7 @@ def load_sentiment_model():
 
     model = load_model(
         model_path,
-        custom_objects={"SimpleRNN": CompatibleSimpleRNN},
-        compile=False
+        custom_objects={"SimpleRNN": CompatibleSimpleRNN}
     )
     return model, word_index, reverse_word_index
 
@@ -68,11 +71,16 @@ def run_app():
             return
 
         preprocessed_input = preprocess_text(user_input)
-        prediction = MODEL.predict(preprocessed_input, verbose=0)
-        sentiment = "Positive" if prediction[0][0] > 0.5 else "Negative"
+        try:
+            prediction = MODEL.predict(preprocessed_input, verbose=0)
+        except Exception:
+            prediction = MODEL(preprocessed_input, training=False)
+
+        score = float(prediction[0][0])
+        sentiment = "Positive" if score > 0.5 else "Negative"
 
         st.write(f"Sentiment: {sentiment}")
-        st.write(f"Prediction Score: {prediction[0][0]:.4f}")
+        st.write(f"Prediction Score: {score:.4f}")
     else:
         st.write("Please enter a movie review.")
 
